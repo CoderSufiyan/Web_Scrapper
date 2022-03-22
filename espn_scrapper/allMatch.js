@@ -20,11 +20,16 @@ function cb(err, res, body){
 function extractAllMatchLink(html){
     
     let selecTool = cheerio.load(html);
-    let scoreCardElemArr = selecTool('a[data-hover="Scorecard"]');
-    for(let i = 0; i < scoreCardElemArr.length; i++){
-        let scorecardLink = selecTool(scoreCardElemArr[i].attr("href"));
+    let scorecardElemArr = selecTool('a[data-hover="Scorecard"]');
+
+    for (let i = 0; i < scorecardElemArr.length; i++){
+        let scorecardLink = selecTool(scorecardElemArr[i]).attr("href");
+        // console.log(i + 1 + ") " + scorecardLink);
         let fullLink = "https://www.espncricinfo.com" + scorecardLink;
+        // getScorecardObj.gifs(fullLink);
         gifs(fullLink);
+        // break;
+
     }
 }
 

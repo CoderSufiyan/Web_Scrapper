@@ -38,6 +38,7 @@ function getMatchDetails(html) {
       );
       console.log(matchResEle.text());
   //4. get team names
+  
     
 }
 //visit every scorecard and get info 
