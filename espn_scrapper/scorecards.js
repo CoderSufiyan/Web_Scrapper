@@ -1,6 +1,8 @@
 const request = require("request");
 const cheerio = require("cheerio");
-const { find } = require("cheerio/lib/api/traversing");
+const fs = require("fs");
+const path = require("path");
+const xlsx = require("xlsx");
 
 function getInfoFromScorecard(url) {
 //   console.log("from scorecards.js ",url);
@@ -37,14 +39,15 @@ function getMatchDetails(html) {
       let matchResEle = selecTool(
         ".match-info.match-info-MATCH.match-info-MATCH-half-width>.status-text"
       );
-      console.log(matchResEle.text());
+  let matchResult = matchResEle.text();;
+      console.log(matchResult);
   //4. get team names
   let teamNameArr = selecTool(".name-detail>.name-link");
   // console.log(teamNames.text());
-  let team1 = selecTool(teamNameArr[0]).text();
-  let team2 = selecTool(teamNameArr[1]).text();
-  console.log(team1);
-  console.log(team2);
+  let ownTeam = selecTool(teamNameArr[0]).text();
+  let opponentTeam = selecTool(teamNameArr[1]).text();
+  console.log(ownTeam);
+  console.log(opponentTeam);
 
   //5. get innings 
 
@@ -72,7 +75,7 @@ function getMatchDetails(html) {
         //     console.log(selecTool(row.find("td")[i]).text());
         //   }
         // }
-        let playerName = selecTool(row.find("td")[0]).text();
+        let playerName = selecTool(row.find("td")[0]).text().trim();
         // console.log(playerName);
         let runs = selecTool(row.find("td")[2]).text();
         let balls = selecTool(row.find("td")[3]).text();
@@ -84,14 +87,84 @@ function getMatchDetails(html) {
           `playerName -> ${playerName} runsScored ->  ${runs} ballsPlayed ->  ${balls} numbOfFours -> ${numberOf4} numbOfSixes -> ${numberOf6}  strikeRate-> ${sr}`
         );
 
-
+        processInformation(
+          dateOfMatch,
+          venueOfMatch,
+          matchResult,
+          ownTeam,
+          opponentTeam,
+          playerName,
+          runs,
+          balls,
+          numberOf4,
+          numberOf6,
+          sr
+        );
       }
     }
   }
 
+  function processInformation(dateOfMatch,venueOfMatch,matchResult,ownTeam,opponentTeam,playerName,runs,balls,numberOf4,numberOf6,sr) {
+    let teamNamePath = path.join(__dirname, "IPL", ownTeam);
+    if (!fs.existsSync(teamNamePath)) {
+      fs.mkdirSync(teamNamePath);
+    }
+
+    let playerPath = path.join(teamNamePath, playerName + ".xlsx");
+    let content = excelReader(playerPath, playerName);
+
+    let playerObj = {
+      dateOfMatch,
+      venueOfMatch,
+      matchResult,
+      ownTeam,
+      opponentTeam,
+      playerName,
+      runs,
+      balls,
+      numberOf4,
+      numberOf6,
+      sr
+    };
+
+    content.push(playerObj);
+    //this function writes all the content into excel sheet , and places that excel sheet data into playerPath-> rohitSharma.xlsx
+    excelWriter(playerPath, content, playerName);
+    
+  }
     
   // console.log(htmlString);
 }
+//this function reads the data from excel file
+function excelReader(playerPath, sheetName) {
+  if (!fs.existsSync(playerPath)) {
+    //if playerPath does not exists, this means that we have never placed any data into that file 
+    return [];
+  }
+  //if playerPath already has some data in it 
+  let workBook = xlsx.readFile(playerPath);
+  //A dictionary of the worksheets in the workbook. Use SheetNames to reference these.
+  let excelData = workBook.Sheets[sheetName];
+  let playerObj = xlsx.utils.sheet_to_json(excelData);
+  return playerObj;
+}
+
+function excelWriter(playerPath, jsObject, sheetName) {
+  //Creates a new workbook
+  let newWorkBook = xlsx.utils.book_new();
+  //Converts an array of JS objects to a worksheet.
+  let newWorkSheet = xlsx.utils.json_to_sheet(jsObject);
+  //it appends a worksheet to a workbook
+  xlsx.utils.book_append_sheet(newWorkBook, newWorkSheet, sheetName);
+  // Attempts to write or download workbook data to file
+  xlsx.writeFile(newWorkBook, playerPath);
+}
+
+
+
+
+
+
 //visit every scorecard and get info 
 module.exports = {
     gifs:getInfoFromScorecard
